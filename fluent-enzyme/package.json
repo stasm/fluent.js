@@ -1,0 +1,44 @@
+{
+  "name": "fluent-enzyme",
+  "description": "Fluent extensions for Enzyme",
+  "version": "0.0.1",
+  "homepage": "http://projectfluent.io",
+  "author": "Mozilla <l10n-drivers@mozilla.org>",
+  "license": "Apache-2.0",
+  "contributors": [
+    {
+      "name": "Zibi Braniecki",
+      "email": "zbraniecki@mozilla.com"
+    },
+    {
+      "name": "Staś Małolepszy",
+      "email": "stas@mozilla.com"
+    }
+  ],
+  "directories": {
+    "lib": "./src"
+  },
+  "main": "./fluent-enzyme.js",
+  "module": "./src/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/projectfluent/fluent.js.git"
+  },
+  "keywords": [
+    "localization",
+    "l10n"
+  ],
+  "engine": {
+    "node": ">=6"
+  },
+  "peerDependencies": {
+    "enzyme": "^2.9.1",
+    "fluent-react": "^0.4.0"
+  },
+  "dependencies": {
+    "enzyme": "^2.9.1",
+    "react": "^15.6.1",
+    "react-dom": "^15.6.1",
+    "react-test-renderer": "^15.6.1"
+  }
+}
