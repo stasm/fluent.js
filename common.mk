@@ -19,7 +19,8 @@ lint:
 	@echo -e " $(OK) $@"
 
 test:
-	@mocha --ui tdd --recursive --require ./test/setup
+	@nyc --reporter=html --reporter=text \
+		mocha --ui tdd --recursive --require ./test/setup
 
 html: $(SOURCES)
 	@jsdoc -c $(ROOT)/.jsdoc.json -R README.md \

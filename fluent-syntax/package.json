@@ -30,5 +30,13 @@
   ],
   "engine": {
     "node": ">=6"
+  },
+  "nyc": {
+    "include": [
+      "src"
+    ],
+    "exclude": [
+      "src/ast.js"
+    ]
   }
 }

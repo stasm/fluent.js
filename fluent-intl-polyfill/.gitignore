@@ -1,2 +1,4 @@
+.nyc_output
+coverage
 fluent-intl-polyfill.js
 compat.js

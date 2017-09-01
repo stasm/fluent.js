@@ -1,2 +1,4 @@
+.nyc_output
+coverage
 fluent-react.js
 compat.js
