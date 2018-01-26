@@ -91,14 +91,8 @@ class RuntimeParser {
 
     let attrs = null;
 
-    if (this._source[this._index] === ' ') {
-      const lineStart = this._index;
-      this.skipInlineWS();
-
-      if (this._source[this._index] === '.') {
-        this._index = lineStart;
-        attrs = this.getAttributes();
-      }
+    if (this._source[this._index] === '.') {
+      attrs = this.getAttributes();
     }
 
     if (attrs === null && typeof val === 'string') {
@@ -129,17 +123,17 @@ class RuntimeParser {
     this.skipInlineWS();
 
     if (this._source[this._index] !== '\n') {
-      return true;
+      return this._source[this._index];
     }
 
     indentRe.lastIndex = this._index;
     if (indentRe.test(this._source)) {
-      this._index = indentRe.lastIndex;
+      this._index = indentRe.lastIndex - 1;
       this.skipInlineWS();
-      return true;
+      return this._source[this._index];
     }
 
-    return false;
+    return '\n';
   }
 
   /**
@@ -151,26 +145,6 @@ class RuntimeParser {
     inlineWhitespaceRe.lastIndex = this._index;
     if (inlineWhitespaceRe.test(this._source)) {
       this._index = inlineWhitespaceRe.lastIndex;
-    }
-  }
-
-  /**
-   * Skip blank lines.
-   *
-   * @private
-   */
-  skipBlankLines() {
-    while (true) {
-      const ptr = this._index;
-
-      this.skipInlineWS();
-
-      if (this._source[this._index] === '\n') {
-        this._index += 1;
-      } else {
-        this._index = ptr;
-        break;
-      }
     }
   }
 
@@ -285,23 +259,15 @@ class RuntimeParser {
       return this.getComplexPattern();
     }
 
-    this._index = eol + 1;
+    this._index = eol;
 
-    this.skipBlankLines();
-
-    if (this._source[this._index] !== ' ') {
+    if (this.skipIndent() === '\n') {
       // No indentation means we're done with this message.
       return firstLineContent;
     }
 
-    const lineStart = this._index;
-
-    this.skipInlineWS();
-
     if (this._source[this._index] === '.') {
-      // The pattern is followed by an attribute. Rewind _index to the first
-      // column of the current line as expected by getAttributes.
-      this._index = lineStart;
+      // The pattern is followed by an attribute.
       return firstLineContent;
     }
 
@@ -329,50 +295,37 @@ class RuntimeParser {
     const content = [];
     let placeables = 0;
 
-    let ch = this._source[this._index];
 
+    outer:
     while (this._index < this._length) {
+
+      let ch = this._source[this._index];
+
       // This block handles multi-line strings combining strings separated
       // by new line.
       if (ch === '\n') {
-        this._index++;
 
-        // We want to capture the start and end pointers
-        // around blank lines and add them to the buffer
-        // but only if the blank lines are in the middle
-        // of the string.
         const blankLinesStart = this._index;
-        this.skipBlankLines();
-        const blankLinesEnd = this._index;
 
-
-        if (this._source[this._index] !== ' ') {
-          break;
-        }
-        this.skipInlineWS();
-
-        if (this._source[this._index] === '}' ||
-            this._source[this._index] === '[' ||
-            this._source[this._index] === '*' ||
-            this._source[this._index] === '.') {
-          this._index = blankLinesEnd;
-          break;
+        switch (this.skipIndent()) {
+          case '.':
+          case '}':
+          case '*':
+          case '[':
+          case '\n':
+            break outer;
+          default:
+            ch = this._source[this._index];
         }
 
-        buffer += this._source.substring(blankLinesStart, blankLinesEnd);
+        const blankLinesEnd = this._index - 1;
+        const blank = this._source.substring(blankLinesStart, blankLinesEnd);
 
-        if (buffer.length || content.length) {
-          buffer += '\n';
-        }
-        ch = this._source[this._index];
-        continue;
-      } else if (ch === '\\') {
-        const ch2 = this._source[this._index + 1];
-        if (ch2 === '"' || ch2 === '{' || ch2 === '\\') {
-          ch = ch2;
-          this._index++;
-        }
-      } else if (ch === '{') {
+        // normalize new lines
+        buffer += blank.replace(/\n[ \t]*/g, '\n');
+      }
+
+      if (ch === '{') {
         // Push the buffer to content array right before placeable
         if (buffer.length) {
           content.push(buffer);
@@ -391,11 +344,19 @@ class RuntimeParser {
         continue;
       }
 
+      if (ch === '\\') {
+        const ch2 = this._source[this._index + 1];
+        if (ch2 === '"' || ch2 === '{' || ch2 === '\\') {
+          ch = ch2;
+          this._index++;
+        }
+      }
+
       if (ch) {
         buffer += ch;
       }
+
       this._index++;
-      ch = this._source[this._index];
     }
 
     if (content.length === 0) {
@@ -682,11 +643,6 @@ class RuntimeParser {
     const attrs = {};
 
     while (this._index < this._length) {
-      if (this._source[this._index] !== ' ') {
-        break;
-      }
-      this.skipInlineWS();
-
       if (this._source[this._index] !== '.') {
         break;
       }
