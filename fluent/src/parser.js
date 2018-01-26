@@ -6,6 +6,9 @@ const identifierRe = new RegExp('-?[a-zA-Z][a-zA-Z0-9_-]*', 'y');
 
 const messageStartRe = /^-?[a-zA-Z][a-zA-Z0-9_-]*[ \t]*=?/my;
 
+const inlineWhitespaceRe = /[ \t]+/y;
+const indentRe = /\n+[ \t*[.{}]/y;
+
 /**
  * The `Parser` class is responsible for parsing FTL resources.
  *
@@ -118,15 +121,25 @@ class RuntimeParser {
   }
 
   /**
-   * Skip whitespace.
+   * Skip any whitespace. Return true if it was inline or indented.
    *
    * @private
    */
-  skipWS() {
-    let ch = this._source[this._index];
-    while (ch === ' ' || ch === '\n' || ch === '\t' || ch === '\r') {
-      ch = this._source[++this._index];
+  skipIndent() {
+    this.skipInlineWS();
+
+    if (this._source[this._index] !== '\n') {
+      return true;
     }
+
+    indentRe.lastIndex = this._index;
+    if (indentRe.test(this._source)) {
+      this._index = indentRe.lastIndex;
+      this.skipInlineWS();
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -135,9 +148,9 @@ class RuntimeParser {
    * @private
    */
   skipInlineWS() {
-    let ch = this._source[this._index];
-    while (ch === ' ' || ch === '\t') {
-      ch = this._source[++this._index];
+    inlineWhitespaceRe.lastIndex = this._index;
+    if (inlineWhitespaceRe.test(this._source)) {
+      this._index = inlineWhitespaceRe.lastIndex;
     }
   }
 
@@ -407,7 +420,7 @@ class RuntimeParser {
   getPlaceable() {
     const start = ++this._index;
 
-    this.skipWS();
+    this.skipIndent();
 
     if (this._source[this._index] === '*' ||
        (this._source[this._index] === '[' &&
@@ -428,7 +441,7 @@ class RuntimeParser {
 
     const selector = this.getSelectorExpression();
 
-    this.skipWS();
+    this.skipIndent();
 
     const ch = this._source[this._index];
 
@@ -469,7 +482,7 @@ class RuntimeParser {
       throw this.error('Variants should be listed in a new line');
     }
 
-    this.skipWS();
+    this.skipIndent();
 
     const variants = this.getVariants();
 
@@ -699,8 +712,6 @@ class RuntimeParser {
           val
         };
       }
-
-      this.skipBlankLines();
     }
 
     return attrs;
@@ -745,7 +756,7 @@ class RuntimeParser {
       };
       variants[index++] = variant;
 
-      this.skipWS();
+      this.skipIndent();
     }
 
     return [variants, defaultIndex];
