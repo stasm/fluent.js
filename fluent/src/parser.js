@@ -2,8 +2,7 @@
 
 const MAX_PLACEABLES = 100;
 
-const privateIdentifierRe = new RegExp('-?[a-zA-Z][a-zA-Z0-9_-]*', 'y');
-const publicIdentifierRe = new RegExp('[a-zA-Z][a-zA-Z0-9_-]*', 'y');
+const identifierRe = new RegExp('-?[a-zA-Z][a-zA-Z0-9_-]*', 'y');
 const functionIdentifierRe = /^[A-Z][A-Z_?-]*$/;
 
 const messageStartRe = /^-?[a-zA-Z][a-zA-Z0-9_-]*[ \t]*=?/my;
@@ -73,7 +72,7 @@ class RuntimeParser {
    * @private
    */
   getMessage() {
-    const id = this.getPrivateIdentifier();
+    const id = this.getIdentifier();
 
     this.skipInlineWS();
 
@@ -166,37 +165,17 @@ class RuntimeParser {
    * @returns {String}
    * @private
    */
-  getIdentifier(re) {
-    re.lastIndex = this._index;
-    const result = re.exec(this._source);
+  getIdentifier() {
+    identifierRe.lastIndex = this._index;
+    const result = identifierRe.exec(this._source);
 
     if (result === null) {
       this._index += 1;
-      throw this.error(`Expected an identifier [${re.toString()}]`);
+      throw this.error(`Expected an identifier [${identifierRe.toString()}]`);
     }
 
-    this._index = re.lastIndex;
+    this._index = identifierRe.lastIndex;
     return result[0];
-  }
-
-  /**
-   * Get a potentially private identifier (staring with a dash).
-   *
-   * @returns {String}
-   * @private
-   */
-  getPrivateIdentifier() {
-    return this.getIdentifier(privateIdentifierRe);
-  }
-
-  /**
-   * Get a public identifier.
-   *
-   * @returns {String}
-   * @private
-   */
-  getPublicIdentifier() {
-    return this.getIdentifier(publicIdentifierRe);
   }
 
   /**
@@ -520,7 +499,7 @@ class RuntimeParser {
     if (this._source[this._index] === '.') {
       this._index++;
 
-      const name = this.getPublicIdentifier();
+      const name = this.getIdentifier();
       this._index++;
       return {
         type: 'attr',
@@ -702,7 +681,7 @@ class RuntimeParser {
       }
       this._index++;
 
-      const key = this.getPublicIdentifier();
+      const key = this.getIdentifier();
 
       this.skipInlineWS();
 
@@ -813,7 +792,7 @@ class RuntimeParser {
       this._index++;
       return {
         type: 'ext',
-        name: this.getPublicIdentifier()
+        name: this.getIdentifier()
       };
     }
 
@@ -827,7 +806,7 @@ class RuntimeParser {
         (cc1 >= 65 && cc1 <= 90)) { // A-Z
       return {
         type: 'ref',
-        name: this.getPrivateIdentifier()
+        name: this.getIdentifier()
       };
     }
 
