@@ -6,6 +6,8 @@ const privateIdentifierRe = new RegExp('-?[a-zA-Z][a-zA-Z0-9_-]*', 'y');
 const publicIdentifierRe = new RegExp('[a-zA-Z][a-zA-Z0-9_-]*', 'y');
 const functionIdentifierRe = /^[A-Z][A-Z_?-]*$/;
 
+const messageStartRe = /^-?[a-zA-Z][a-zA-Z0-9_-]*[ \t]*=?/my;
+
 /**
  * The `Parser` class is responsible for parsing FTL resources.
  *
@@ -37,80 +39,31 @@ class RuntimeParser {
 
     const errors = [];
 
-    this.skipWS();
-    while (this._index < this._length) {
-      try {
-        this.getEntry();
-      } catch (e) {
-        if (e instanceof SyntaxError) {
-          errors.push(e);
-
-          this.skipToNextEntryStart();
-        } else {
-          throw e;
-        }
-      }
+    for (const offset of this.messageStartingPositions(string)) {
+      this._index = offset;
+      this.getMessage();
       this.skipWS();
     }
 
     return [this.entries, errors];
   }
 
-  /**
-   * Parse the source string from the current index as an FTL entry
-   * and add it to object's entries property.
-   *
-   * @private
-   */
-  getEntry() {
-    // The index here should either be at the beginning of the file
-    // or right after new line.
-    if (this._index !== 0 &&
-        this._source[this._index - 1] !== '\n') {
-      throw this.error(`Expected an entry to start
-        at the beginning of the file or on a new line.`);
+  *messageStartingPositions(source) {
+    let lastIndex = 0;
+
+    while (true) {
+      messageStartRe.lastIndex = lastIndex;
+      if (messageStartRe.test(source)) {
+        yield lastIndex;
+      }
+
+      const lineEnd = source.indexOf('\n', lastIndex)
+      if (lineEnd === -1) {
+        break;
+      }
+
+      lastIndex = lineEnd + 1;
     }
-
-    const ch = this._source[this._index];
-
-    // We don't care about comments or sections at runtime
-    if (ch === '/' ||
-      (ch === '#' && [' ', '#'].includes(this._source[this._index + 1]))) {
-      this.skipComment();
-      return;
-    }
-
-    if (ch === '[') {
-      this.skipSection();
-      return;
-    }
-
-    this.getMessage();
-  }
-
-  /**
-   * Skip the section entry from the current index.
-   *
-   * @private
-   */
-  skipSection() {
-    this._index += 1;
-    if (this._source[this._index] !== '[') {
-      throw this.error('Expected "[[" to open a section');
-    }
-
-    this._index += 1;
-
-    this.skipInlineWS();
-    this.getVariantName();
-    this.skipInlineWS();
-
-    if (this._source[this._index] !== ']' ||
-        this._source[this._index + 1] !== ']') {
-      throw this.error('Expected "]]" to close a section');
-    }
-
-    this._index += 2;
   }
 
   /**
@@ -890,36 +843,6 @@ class RuntimeParser {
   }
 
   /**
-   * Skips an FTL comment.
-   *
-   * @private
-   */
-  skipComment() {
-    // At runtime, we don't care about comments so we just have
-    // to parse them properly and skip their content.
-    let eol = this._source.indexOf('\n', this._index);
-
-    while (eol !== -1 &&
-      ((this._source[eol + 1] === '/' && this._source[eol + 2] === '/') ||
-       (this._source[eol + 1] === '#' &&
-         [' ', '#'].includes(this._source[eol + 2])))) {
-      this._index = eol + 3;
-
-      eol = this._source.indexOf('\n', this._index);
-
-      if (eol === -1) {
-        break;
-      }
-    }
-
-    if (eol === -1) {
-      this._index = this._length;
-    } else {
-      this._index = eol + 1;
-    }
-  }
-
-  /**
    * Creates a new SyntaxError object with a given message.
    *
    * @param {String} message
@@ -930,37 +853,6 @@ class RuntimeParser {
     return new SyntaxError(message);
   }
 
-  /**
-   * Skips to the beginning of a next entry after the current position.
-   * This is used to mark the boundary of junk entry in case of error,
-   * and recover from the returned position.
-   *
-   * @private
-   */
-  skipToNextEntryStart() {
-    let start = this._index;
-
-    while (true) {
-      if (start === 0 || this._source[start - 1] === '\n') {
-        const cc = this._source.charCodeAt(start);
-
-        if ((cc >= 97 && cc <= 122) || // a-z
-            (cc >= 65 && cc <= 90) || // A-Z
-             cc === 47 || cc === 91) { // /[
-          this._index = start;
-          return;
-        }
-      }
-
-      start = this._source.indexOf('\n', start);
-
-      if (start === -1) {
-        this._index = this._length;
-        return;
-      }
-      start++;
-    }
-  }
 }
 
 /**
