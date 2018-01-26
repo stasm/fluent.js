@@ -3,7 +3,6 @@
 const MAX_PLACEABLES = 100;
 
 const identifierRe = new RegExp('-?[a-zA-Z][a-zA-Z0-9_-]*', 'y');
-const functionIdentifierRe = /^[A-Z][A-Z_?-]*$/;
 
 const messageStartRe = /^-?[a-zA-Z][a-zA-Z0-9_-]*[ \t]*=?/my;
 
@@ -523,10 +522,6 @@ class RuntimeParser {
     if (this._source[this._index] === '(') {
       this._index++;
       const args = this.getCallArgs();
-
-      if (!functionIdentifierRe.test(literal.name)) {
-        throw this.error('Function names must be all upper-case');
-      }
 
       this._index++;
 
