@@ -39,8 +39,11 @@ class RuntimeParser {
 
     for (const offset of this.messageStartingPositions(string)) {
       this._index = offset;
-      this.getMessage();
-      this.skipWS();
+      try {
+        this.getMessage();
+      } catch (e) {
+        continue;
+      }
     }
 
     return [this.entries, errors];
