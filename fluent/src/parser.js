@@ -8,6 +8,7 @@ const messageStartRe = /^-?[a-zA-Z][a-zA-Z0-9_-]*[ \t]*=?/my;
 
 const inlineWhitespaceRe = /[ \t]+/y;
 const indentRe = /\n+[ \t*[.{}]/y;
+const numberRe = /-?[0-9]+(\.[0-9]+)/y;
 
 /**
  * The `Parser` class is responsible for parsing FTL resources.
@@ -590,47 +591,19 @@ class RuntimeParser {
    * @private
    */
   getNumber() {
-    let num = '';
-    let cc = this._source.charCodeAt(this._index);
+    numberRe.lastIndex = this._index;
 
-    // The number literal may start with negative sign `-`.
-    if (cc === 45) {
-      num += '-';
-      cc = this._source.charCodeAt(++this._index);
+    if (!numberRe.test(this._source)) {
+      throw this.error('Expected a number');
     }
 
-    // next, we expect at least one digit
-    if (cc < 48 || cc > 57) {
-      throw this.error(`Unknown literal "${num}"`);
-    }
-
-    // followed by potentially more digits
-    while (cc >= 48 && cc <= 57) {
-      num += this._source[this._index++];
-      cc = this._source.charCodeAt(this._index);
-    }
-
-    // followed by an optional decimal separator `.`
-    if (cc === 46) {
-      num += this._source[this._index++];
-      cc = this._source.charCodeAt(this._index);
-
-      // followed by at least one digit
-      if (cc < 48 || cc > 57) {
-        throw this.error(`Unknown literal "${num}"`);
-      }
-
-      // and optionally more digits
-      while (cc >= 48 && cc <= 57) {
-        num += this._source[this._index++];
-        cc = this._source.charCodeAt(this._index);
-      }
-    }
-
-    return {
+    const num = {
       type: 'num',
-      val: num
+      val: this._source.slice(this._index, numberRe.lastIndex)
     };
+
+    this._index = numberRe.lastIndex;
+    return num;
   }
 
   /**
