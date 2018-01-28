@@ -2,13 +2,15 @@
 
 const MAX_PLACEABLES = 100;
 
-const identifierRe = new RegExp('-?[a-zA-Z][a-zA-Z0-9_-]*', 'y');
-
 const messageStartRe = /^-?[a-zA-Z][a-zA-Z0-9_-]*[ \t]*=?/my;
 
 const inlineWhitespaceRe = /[ \t]+/y;
 const indentRe = /\n+[ \t*[.{}]/y;
+
+const identifierRe = /-?[a-zA-Z][a-zA-Z0-9_-]*/y;
+const externalRe = /$[a-zA-Z][a-zA-Z0-9_-]*/y;
 const numberRe = /-?[0-9]+(\.[0-9]+)/y;
+const stringRe = /"\.*"/y;
 
 /**
  * The `Parser` class is responsible for parsing FTL resources.
@@ -724,35 +726,29 @@ class RuntimeParser {
    * @private
    */
   getLiteral() {
-    const cc0 = this._source.charCodeAt(this._index);
-
-    if (cc0 === 36) { // $
-      this._index++;
+    externalRe.lastIndex = this._index;
+    if (externalRe.test(this._source)) {
       return {
         type: 'ext',
         name: this.getIdentifier()
       };
     }
 
-    const cc1 = cc0 === 45 // -
-      // Peek at the next character after the dash.
-      ? this._source.charCodeAt(this._index + 1)
-      // Or keep using the character at the current index.
-      : cc0;
-
-    if ((cc1 >= 97 && cc1 <= 122) || // a-z
-        (cc1 >= 65 && cc1 <= 90)) { // A-Z
+    identifierRe.lastIndex = this._index;
+    if (identifierRe.test(this._source)) {
       return {
         type: 'ref',
         name: this.getIdentifier()
       };
     }
 
-    if ((cc1 >= 48 && cc1 <= 57)) { // 0-9
+    numberRe.lastIndex = this._index;
+    if (numberRe.test(this._source)) {
       return this.getNumber();
     }
 
-    if (cc0 === 34) { // "
+    stringRe.lastIndex = this._index;
+    if (stringRe.test(this._source)) {
       return this.getString();
     }
 
