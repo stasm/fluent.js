@@ -10,7 +10,7 @@ const indentRe = /\n+[ \t*[.{}]/y;
 const identifierRe = /-?[a-zA-Z][a-zA-Z0-9_-]*/y;
 const externalRe = /$[a-zA-Z][a-zA-Z0-9_-]*/y;
 const numberRe = /-?[0-9]+(\.[0-9]+)/y;
-const stringRe = /"\.*"/y;
+const stringRe = /".*"/y;
 
 /**
  * The `Parser` class is responsible for parsing FTL resources.
@@ -208,30 +208,6 @@ class RuntimeParser {
     name += this._source.slice(start, this._index);
 
     return { type: 'varname', name };
-  }
-
-  /**
-   * Get simple string argument enclosed in `"`.
-   *
-   * @returns {String}
-   * @private
-   */
-  getString() {
-    const start = this._index + 1;
-
-    while (++this._index < this._length) {
-      const ch = this._source[this._index];
-
-      if (ch === '"') {
-        break;
-      }
-
-      if (ch === '\n') {
-        throw this.error('Unterminated string expression');
-      }
-    }
-
-    return this._source.substring(start, this._index++);
   }
 
   /**
@@ -584,6 +560,25 @@ class RuntimeParser {
     }
 
     return args;
+  }
+
+  /**
+   * Get simple string argument enclosed in `"`.
+   *
+   * @returns {String}
+   * @private
+   */
+  getString() {
+    stringRe.lastIndex = this._index;
+
+    if (!stringRe.test(this._source)) {
+      throw this.error('Expected a quoted string');
+    }
+
+    // Trim the quotes
+    const str = this._source.slice(this._index + 1, stringRe.lastIndex - 1);
+    this._index = stringRe.lastIndex;
+    return str;
   }
 
   /**
