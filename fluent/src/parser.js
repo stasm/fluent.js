@@ -570,15 +570,16 @@ class RuntimeParser {
    */
   getString() {
     stringRe.lastIndex = this._index;
+    const result = stringRe.exec(this._source);
 
-    if (!stringRe.test(this._source)) {
+    if (result === null) {
       throw this.error('Expected a quoted string');
     }
 
-    // Trim the quotes
-    const str = this._source.slice(this._index + 1, stringRe.lastIndex - 1);
     this._index = stringRe.lastIndex;
-    return str;
+
+    // Trim the quotes
+    return result[0].slice(1, -1);
   }
 
   /**
@@ -589,18 +590,18 @@ class RuntimeParser {
    */
   getNumber() {
     numberRe.lastIndex = this._index;
+    const result = numberRe.exec(this._source);
 
-    if (!numberRe.test(this._source)) {
+    if (result === null) {
       throw this.error('Expected a number');
     }
 
-    const num = {
-      type: 'num',
-      val: this._source.slice(this._index, numberRe.lastIndex)
-    };
-
     this._index = numberRe.lastIndex;
-    return num;
+
+    return {
+      type: 'num',
+      val: result[0]
+    };
   }
 
   /**
