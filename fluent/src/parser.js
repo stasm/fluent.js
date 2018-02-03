@@ -7,10 +7,11 @@ const messageStartRe = /^-?[a-zA-Z][a-zA-Z0-9_-]*[ \t]*=?/my;
 const inlineWhitespaceRe = /[ \t]+/y;
 const indentRe = /\n+[ \t*[.{}]/y;
 
-const identifierRe = /-?[a-zA-Z][a-zA-Z0-9_-]*/y;
-const externalRe = /$[a-zA-Z][a-zA-Z0-9_-]*/y;
-const numberRe = /-?[0-9]+(\.[0-9]+)/y;
-const stringRe = /".*"/y;
+const entryIdentifierRe = /-?[a-zA-Z][a-zA-Z0-9_-]*/y;
+const identifierRe = /[a-zA-Z][a-zA-Z0-9_-]*/y;
+const externalRe = /\$[a-zA-Z][a-zA-Z0-9_-]*/y;
+const numberRe = /-?[0-9]+(\.[0-9]+)?/y;
+const stringRe = /".*?"/y;
 
 /**
  * The `Parser` class is responsible for parsing FTL resources.
@@ -43,7 +44,7 @@ class RuntimeParser {
 
     const errors = [];
 
-    for (const offset of this.messageStartingPositions(string)) {
+    for (const offset of this.entryOffsets(string)) {
       this._index = offset;
       try {
         this.getMessage();
@@ -55,7 +56,7 @@ class RuntimeParser {
     return [this.entries, errors];
   }
 
-  *messageStartingPositions(source) {
+  *entryOffsets(source) {
     let lastIndex = 0;
 
     while (true) {
@@ -64,7 +65,7 @@ class RuntimeParser {
         yield lastIndex;
       }
 
-      const lineEnd = source.indexOf('\n', lastIndex)
+      const lineEnd = source.indexOf('\n', lastIndex);
       if (lineEnd === -1) {
         break;
       }
@@ -80,7 +81,7 @@ class RuntimeParser {
    * @private
    */
   getMessage() {
-    const id = this.getIdentifier();
+    const id = this.getEntryIdentifier();
 
     this.skipInlineWS();
 
@@ -92,6 +93,10 @@ class RuntimeParser {
 
     const val = this.getPattern();
 
+    if (id.startsWith('-') && val === null) {
+      throw this.error('Expected term to have a value');
+    }
+
     let attrs = null;
 
     if (this._source[this._index] === '.') {
@@ -102,7 +107,7 @@ class RuntimeParser {
       this.entries[id] = val;
     } else {
       if (val === null && attrs === null) {
-        throw this.error('Expected a value or an attribute');
+        throw this.error('Expected message to have a value or attributes');
       }
 
       this.entries[id] = {};
@@ -152,22 +157,35 @@ class RuntimeParser {
   }
 
   /**
-   * Get identifier of a Message, Attribute or External Attribute.
+   * Get identifier using the provided regex.
+   *
+   * By default this will get identifiers of public messages, attributes and
+   * external arguments (without the $).
    *
    * @returns {String}
    * @private
    */
-  getIdentifier() {
-    identifierRe.lastIndex = this._index;
-    const result = identifierRe.exec(this._source);
+  getIdentifier(re = identifierRe) {
+    re.lastIndex = this._index;
+    const result = re.exec(this._source);
 
     if (result === null) {
       this._index += 1;
-      throw this.error(`Expected an identifier [${identifierRe.toString()}]`);
+      throw this.error(`Expected an identifier [${re.toString()}]`);
     }
 
-    this._index = identifierRe.lastIndex;
+    this._index = re.lastIndex;
     return result[0];
+  }
+
+  /**
+   * Get identifier of a Message or a Term (staring with a dash).
+   *
+   * @returns {String}
+   * @private
+   */
+  getEntryIdentifier() {
+    return this.getIdentifier(entryIdentifierRe);
   }
 
   /**
@@ -724,17 +742,18 @@ class RuntimeParser {
   getLiteral() {
     externalRe.lastIndex = this._index;
     if (externalRe.test(this._source)) {
+      this._index++;
       return {
         type: 'ext',
         name: this.getIdentifier()
       };
     }
 
-    identifierRe.lastIndex = this._index;
-    if (identifierRe.test(this._source)) {
+    entryIdentifierRe.lastIndex = this._index;
+    if (entryIdentifierRe.test(this._source)) {
       return {
         type: 'ref',
-        name: this.getIdentifier()
+        name: this.getEntryIdentifier()
       };
     }
 

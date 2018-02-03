@@ -109,7 +109,7 @@ export class FTLParserStream extends ParserStream {
            (cc >= 65 && cc <= 90); // A-Z
   }
 
-  isMessageIDStart() {
+  isEntryIDStart() {
     if (this.currentIs('-')) {
       this.peek();
     }
@@ -289,7 +289,9 @@ export class FTLParserStream extends ParserStream {
     while (this.ch) {
       if (this.currentIs('\n') && !this.peekCharIs('\n')) {
         this.next();
-        if (this.ch === undefined || this.isMessageIDStart() ||
+        if (this.ch === undefined ||
+            this.isEntryIDStart() ||
+            this.currentIs('#') ||
             (this.currentIs('/') && this.peekCharIs('/')) ||
             (this.currentIs('[') && this.peekCharIs('['))) {
           break;
@@ -299,8 +301,8 @@ export class FTLParserStream extends ParserStream {
     }
   }
 
-  takeIDStart(allowPrivate) {
-    if (allowPrivate && this.currentIs('-')) {
+  takeIDStart(allowTerm) {
+    if (allowTerm && this.currentIs('-')) {
       this.next();
       return '-';
     }
@@ -311,7 +313,7 @@ export class FTLParserStream extends ParserStream {
       return ret;
     }
 
-    const allowedRange = allowPrivate ? 'a-zA-Z-' : 'a-zA-Z';
+    const allowedRange = allowTerm ? 'a-zA-Z-' : 'a-zA-Z';
     throw new ParseError('E0004', allowedRange);
   }
 

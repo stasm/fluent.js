@@ -3,7 +3,7 @@
 import assert from 'assert';
 
 import { MessageContext } from '../src/context';
-import { ftl } from './util';
+import { ftl } from '../src/util';
 
 suite('Primitives', function() {
   let ctx, args, errs;
@@ -57,11 +57,11 @@ suite('Primitives', function() {
 
         placeable-attr   = { bar.attr }
 
-        -baz
-            .attr = Bar Attribute
+        -baz = Baz
+            .attr = Baz Attribute
 
         selector-attr    = { -baz.attr ->
-           *[Bar Attribute] Member 3
+           *[Baz Attribute] Member 3
         }
       `);
     });

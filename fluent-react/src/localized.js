@@ -76,7 +76,7 @@ export default class Localized extends Component {
 
   render() {
     const { l10n } = this.context;
-    const { id, children } = this.props;
+    const { id, attrs, children } = this.props;
     const elem = Children.only(children);
 
     if (!l10n) {
@@ -93,13 +93,29 @@ export default class Localized extends Component {
 
     const msg = mcx.getMessage(id);
     const [args, elems] = toArguments(this.props);
-    const { value, attrs } = l10n.formatCompound(mcx, msg, args);
+    const {
+      value: messageValue,
+      attrs: messageAttrs
+    } = l10n.formatCompound(mcx, msg, args);
 
-    if (value === null || !value.includes('<')) {
-      return cloneElement(elem, attrs, value);
+    // The default is to forbid all message attributes. If the attrs prop exists
+    // on the Localized instance, only set message attributes which have been
+    // explicitly allowed by the developer.
+    if (attrs && messageAttrs) {
+      var localizedProps = {};
+
+      for (const [name, value] of Object.entries(messageAttrs)) {
+        if (attrs[name]) {
+          localizedProps[name] = value;
+        }
+      }
     }
 
-    const translationNodes = Array.from(parseMarkup(value).childNodes);
+    if (messageValue === null || !messageValue.includes('<')) {
+      return cloneElement(elem, localizedProps, messageValue);
+    }
+
+    const translationNodes = Array.from(parseMarkup(messageValue).childNodes);
     const translatedChildren = translationNodes.map(childNode => {
       if (childNode.nodeType === childNode.TEXT_NODE) {
         return childNode.textContent;
@@ -114,15 +130,15 @@ export default class Localized extends Component {
         elems[childNode.localName],
         // XXX Explicitly ignore any attributes defined in the translation.
         null,
-        // XXX React breaks if we try to pass non-null children to void elements
-        // (like <input>). At the same time, textContent of such elements is an
-        // empty string, so we explicitly pass null instead.
-        // See https://github.com/projectfluent/fluent.js/issues/105.
+        // Void elements have textContent == "" but React doesn't allow them to
+        // have any children so we pass null here for any falsy textContent.
+        // This means that an empty element in the translation will always clear
+        // any existing children in the element passed in the prop.
         childNode.textContent || null
       );
     });
 
-    return cloneElement(elem, attrs, ...translatedChildren);
+    return cloneElement(elem, localizedProps, ...translatedChildren);
   }
 }
 

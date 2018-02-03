@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Localized } from 'fluent-react';
+import { Localized } from 'fluent-react/compat';
 
 function Header(props) {
   const { children } = props;
@@ -32,10 +32,10 @@ export default class App extends Component {
             </Localized>
         }
 
-        <Localized id="type-name">
+        <Localized id="type-name" attrs={{placeholder: true}}>
           <input
             type="text"
-            placeholder="Your name"
+            placeholder="Type your name"
             onChange={evt => this.handleNameChange(evt.target.value)}
             value={name}
           />
