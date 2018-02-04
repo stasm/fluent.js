@@ -23,6 +23,10 @@ cumulative.ftlEntriesParseStart = process.hrtime(start);
 var [entries] = Fluent._parse(ftlCode);
 cumulative.ftlEntriesParseEnd = process.hrtime(start);
 
+cumulative.ftlOffsetsStart = process.hrtime(start);
+var offsets = [...Fluent.messageOffsets(ftlCode)];
+cumulative.ftlOffsetsEnd = process.hrtime(start);
+
 var ctx = new Fluent.MessageContext('en-US');
 var errors = ctx.addMessages(ftlCode);
 
@@ -40,6 +44,7 @@ cumulative.formatEnd = process.hrtime(start);
 var results = {
   "parse full AST (ms)": ms(cumulative.ftlParseEnd) - ms(cumulative.ftlParseStart),
   "parse runtime AST (ms)": ms(cumulative.ftlEntriesParseEnd) - ms(cumulative.ftlEntriesParseStart),
+  "offsets (ms)": ms(cumulative.ftlOffsetsEnd) - ms(cumulative.ftlOffsetsStart),
   "format (ms)": ms(cumulative.formatEnd) - ms(cumulative.format),
 };
 console.log(JSON.stringify(results));

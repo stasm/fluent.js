@@ -8,6 +8,7 @@
  */
 
 export { default as _parse } from './parser';
+export { lexEntry, messageOffsets } from './lexer';
 
 export { MessageContext } from './context';
 export {

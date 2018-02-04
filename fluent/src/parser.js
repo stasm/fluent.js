@@ -790,7 +790,9 @@ class RuntimeParser {
  * @param {String} string
  * @returns {Array<Object, Array>}
  */
-export default function parse(string) {
+//export default
+module.exports = 
+function parse(string) {
   const parser = new RuntimeParser();
   return parser.getResource(string);
 }
