@@ -24,7 +24,10 @@ var [entries] = Fluent._parse(ftlCode);
 cumulative.ftlEntriesParseEnd = process.hrtime(start);
 
 cumulative.ftlOffsetsStart = process.hrtime(start);
-var offsets = [...Fluent.messageOffsets(ftlCode)];
+for (const offset of Fluent.messageOffsets(ftlCode)) {
+    for (const lexeme of Fluent.lexEntry(ftlCode, ofset)) {
+    }
+}
 cumulative.ftlOffsetsEnd = process.hrtime(start);
 
 var ctx = new Fluent.MessageContext('en-US');

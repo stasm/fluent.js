@@ -1,6 +1,6 @@
 const messageStartRe = /^-?[a-zA-Z][a-zA-Z0-9_-]*[ \t]*=?/my;
 
-// export
+//export
 exports.messageOffsets =
 function *messageOffsets(source) {
     let lastIndex = 0;
@@ -20,36 +20,52 @@ function *messageOffsets(source) {
     }
 }
 
-const inlineWhitespaceRe = /[ \t]+/y;
-const indentRe = /\n+[ \t*[.{}]/y;
-
-const entryIdentifierRe = /-?[a-zA-Z][a-zA-Z0-9_-]*/y;
-const identifierRe = /[a-zA-Z][a-zA-Z0-9_-]*/y;
-const externalRe = /\$[a-zA-Z][a-zA-Z0-9_-]*/y;
-const numberRe = /-?[0-9]+(\.[0-9]+)?/y;
-const stringRe = /".*?"/y;
-
-const ENTRY_TOKENS = {
+const SKIP_TOKENS = {
     INLINE_WHITESPACE: /[ \t]+/y,
     BREAK_INDENT: /\n\s*[ \t]/y,
-    BREAK_LINE: /\n/y,
+    BREAK_LINE: /\s*\n/y,
+    COMMENT: /\/\/.*\n/y,
+    SECTION: /\[\[.*\n/y,
+}
 
-    ENTRY_ONE_LINE: /(-?[a-zA-Z][\w-]*)[ \t]*=[ \t]*([^\s{}]+)[ \t]*/y,
-    ATTRIBUTE_ONE_LINE: /\.(-?[a-zA-Z][\w-]*)[ \t]*=[ \t]*([^\s{}]+)[ \t]*/y,
+const ENTRY_TOKENS = {
+    ENTRY_ONE_LINE: /^(-?[a-zA-Z][\w-]*)[ \t]*=[ \t]*([^\n{}]+)[ \t]*(?=\n)/my,
+    ATTRIBUTE_ONE_LINE: /\.(-?[a-zA-Z][\w-]*)[ \t]*=[ \t]*([^\n{}]+)[ \t]*(?=\n)/y,
 
-    ENTRY_START: /(-?[a-zA-Z][\w-]*)[ \t]*=?/y,
-    ATTRIBUTE_START: /\.([a-zA-Z][\w-]*)[ \t]*=?/y,
+    TEXT: /[ \t]*([^\n{}]+)[ \t]*/y,
+
+    ENTRY_START: /^(-?[a-zA-Z][\w-]*)[ \t]*=?/my,
+    ATTRIBUTE_START: /\.([a-zA-Z][\w-]*)[ \t]*=/y,
+
+    PLACEABLE_MESSAGE_REFERENCE: /\{\s*(-?[a-zA-Z][\w-]+)\s*\}/y,
+    PLACEABLE_EXTERNAL_ARGUMENT: /\{\s*(\$[a-zA-Z][\w-]+)\s*\}/y,
+    PLACEABLE_EMPTY_STRING: /\{\s*("")\s*\}/y,
 
     IDENTIFIER: /(-?[a-zA-Z][\w-]*)/y,
     STRING: /(".*?")/y,
     NUMBER: /(-?\d+(?:\.\d+)?)/y,
-}
+};
 
-// export
+
+//export
 exports.lexEntry =
 function *lexEntry(source, index = 0) {
     while (true) {
         let matchFound = false;
+
+        for (const [token, regex] of Object.entries(SKIP_TOKENS)) {
+            regex.lastIndex = index;
+            if (regex.test(source)) {
+                matchFound = true;
+                index = regex.lastIndex;
+                yield { token };
+                break;
+            }
+        }
+
+        if (matchFound) {
+            continue;
+        }
 
         for (const [token, regex] of Object.entries(ENTRY_TOKENS)) {
             regex.lastIndex = index;
